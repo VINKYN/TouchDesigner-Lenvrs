@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23120d1a'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%23eb5c40'/%3E%3C/svg%3E" />
+    <title>TouchDesigner — Flux Direct</title>
+  </head>
+  <body>
+    <main id="stage">
+      <!-- Flux vidéo WebRTC natif 60 FPS (décodage matériel GPU) -->
+      <video id="td-video" class="fit-cover" autoplay playsinline muted></video>
+      <!-- Canvas de secours uniquement si bascule JPEG asynchrone -->
+      <canvas id="td-canvas" class="hidden"></canvas>
+
+      <!-- Écran d'attente discret tant que TouchDesigner n'est pas connecté -->
+      <div id="td-waiting" role="status">
+        <div class="waiting-card">
+          <div class="waiting-spinner" aria-hidden="true"></div>
+          <h1 id="waiting-title">Connexion à TouchDesigner…</h1>
+          <p id="waiting-message">
+            En attente du flux vidéo WebRTC 60 FPS depuis ton fichier <code>.toe</code>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Menu de paramètres caché — ouvert en tapant "vn" au clavier -->
+      <aside id="vn-overlay" class="vn-overlay hidden" aria-hidden="true">
+        <div class="vn-panel" role="dialog" aria-labelledby="vn-title">
+          <header class="vn-header">
+            <div class="vn-title-group">
+              <span class="vn-badge">VN</span>
+              <h2 id="vn-title">Paramètres TouchDesigner</h2>
+            </div>
+            <button id="vn-close-btn" type="button" class="icon-btn" title="Fermer (Échap ou vn)" aria-label="Fermer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </header>
+
+          <div class="vn-body">
+            <!-- Source caméra (réelle depuis MediaPipe TD) -->
+            <div class="vn-field">
+              <label for="camera-select">Source caméra (TouchDesigner)</label>
+              <div class="select-row">
+                <select id="camera-select">
+                  <option value="">En attente de TouchDesigner…</option>
+                </select>
+                <button id="refresh-cameras-btn" type="button" class="icon-btn" title="Rafraîchir depuis TouchDesigner" aria-label="Rafraîchir les caméras">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Résolution caméra MediaPipe -->
+            <div class="vn-field">
+              <label for="resolution-select">Résolution caméra</label>
+              <select id="resolution-select">
+                <option value="1280x720">1280 × 720 (HD — Défaut)</option>
+                <option value="1920x1080">1920 × 1080 (Full HD)</option>
+                <option value="640x480">640 × 480 (Léger)</option>
+              </select>
+            </div>
+
+            <!-- Cadrage & Fluidité côte à côte -->
+            <div class="vn-row-2">
+              <div class="vn-field">
+                <label for="fit-select">Cadrage</label>
+                <select id="fit-select">
+                  <option value="cover">Remplir (Cover)</option>
+                  <option value="contain">Entier (Contain)</option>
+                </select>
+              </div>
+              <div class="vn-field">
+                <label for="fps-select">Fluidité flux</label>
+                <select id="fps-select">
+                  <option value="60" selected>60 FPS (Fluide)</option>
+                  <option value="45">45 FPS</option>
+                  <option value="30">30 FPS</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Miroir horizontal (pilote MediaPipe.par.Wflip dans TD) -->
+            <div class="vn-toggle-row">
+              <div class="vn-toggle-text">
+                <span class="vn-toggle-label">Miroir horizontal</span>
+                <span class="vn-toggle-sub">Inverse la caméra dans TouchDesigner</span>
+              </div>
+              <label class="switch">
+                <input id="mirror-toggle" type="checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="vn-actions">
+              <button id="fullscreen-btn" type="button" class="action-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <polyline points="9 21 3 21 3 15"></polyline>
+                  <line x1="21" y1="3" x2="14" y2="10"></line>
+                  <line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+                <span id="fullscreen-btn-label">Plein écran</span>
+              </button>
+              <button id="reset-particles-btn" type="button" class="action-btn secondary">
+                Reset particules
+              </button>
+            </div>
+
+            <button id="reset-mp-btn" type="button" class="action-btn secondary full-width">
+              Relancer la caméra MediaPipe dans TD
+            </button>
+          </div>
+
+          <footer class="vn-footer">
+            <div class="vn-status-item">
+              <span class="status-dot" id="tracking-dot"></span>
+              <span id="tracking-status">Déconnecté de TouchDesigner</span>
+            </div>
+            <div class="vn-metrics">
+              <span id="resolution-readout">—</span>
+              <span class="sep">·</span>
+              <span id="fps-readout">-- FPS</span>
+            </div>
+          </footer>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

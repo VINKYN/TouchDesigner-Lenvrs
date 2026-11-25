@@ -1,0 +1,9 @@
+web-app/node_modules/
+web-app/dist/
+web-app/td/project_live.toe
+web-app/td/bridge.log
+web-app/td/_work_toe/
+**/__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
